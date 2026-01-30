@@ -65,3 +65,6 @@ secrets.properties
 /app/google-services.json
 
 .kotlin/
+
+# Samsung Health SDK (사용자가 직접 추가해야 함)
+app/libs/*.aar
