@@ -1,8 +1,11 @@
 package com.easyhooon.samsunghealthexample.model
 
+import androidx.compose.runtime.Immutable
+
 /**
  * 운동 데이터 모델
  */
+@Immutable
 data class ExerciseData(
     // HealthDataPoint의 uid + session index로 구성된 고유 식별자
     val id: String,
@@ -28,6 +31,7 @@ data class ExerciseData(
 /**
  * 심박수 샘플 데이터
  */
+@Immutable
 data class HeartRateSample(
     val timestamp: Long, // epoch millis
     val heartRate: Int,

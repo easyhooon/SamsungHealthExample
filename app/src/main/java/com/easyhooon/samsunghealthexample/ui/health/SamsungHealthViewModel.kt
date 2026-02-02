@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.easyhooon.samsunghealthexample.health.SamsungHealthManager
 import com.easyhooon.samsunghealthexample.model.ExerciseData
 import com.easyhooon.samsunghealthexample.model.HealthError
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import com.samsung.android.sdk.health.data.error.AuthorizationException
 import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.error.InvalidRequestException
@@ -30,7 +33,8 @@ class SamsungHealthViewModel @Inject constructor(
             permissionsGranted = false,
             todaySteps = 0L,
             weekSteps = 0L,
-            todayExercises = emptyList(),
+            todayExercises = persistentListOf(),
+            exerciseDateLabel = "오늘",
             statusMessage = "Samsung Health 준비",
             errorLevel = null,
             isLoading = false,
@@ -211,7 +215,8 @@ class SamsungHealthViewModel @Inject constructor(
 
                 _state.update { currentState ->
                     currentState.copy(
-                        todayExercises = exercises,
+                        todayExercises = exercises.toImmutableList(),
+                        exerciseDateLabel = "오늘",
                         statusMessage = "운동 데이터를 성공적으로 가져왔습니다! (${exercises.size}개)",
                         errorLevel = null,
                         isLoading = false,
@@ -221,7 +226,8 @@ class SamsungHealthViewModel @Inject constructor(
                 handleHealthDataException(e)
                 _state.update { currentState ->
                     currentState.copy(
-                        todayExercises = emptyList(),
+                        todayExercises = persistentListOf(),
+                        exerciseDateLabel = "오늘",
                         isLoading = false,
                     )
                 }
@@ -229,7 +235,8 @@ class SamsungHealthViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         statusMessage = "운동 데이터 조회 실패: ${e.message}",
-                        todayExercises = emptyList(),
+                        todayExercises = persistentListOf(),
+                        exerciseDateLabel = "오늘",
                         isLoading = false,
                     )
                 }
@@ -256,11 +263,13 @@ class SamsungHealthViewModel @Inject constructor(
                 }
 
                 val exercises = samsungHealthManager.getExercisesForDateRange(startDate, endDate)
+                val dateLabel = "${startDate} ~ ${endDate}"
 
                 _state.update { currentState ->
                     currentState.copy(
-                        todayExercises = exercises,
-                        statusMessage = "${startDate} ~ ${endDate} 운동 데이터 (${exercises.size}개)",
+                        todayExercises = exercises.toImmutableList(),
+                        exerciseDateLabel = dateLabel,
+                        statusMessage = "${dateLabel} 운동 데이터 (${exercises.size}개)",
                         errorLevel = null,
                         isLoading = false,
                     )
@@ -269,7 +278,7 @@ class SamsungHealthViewModel @Inject constructor(
                 handleHealthDataException(e)
                 _state.update { currentState ->
                     currentState.copy(
-                        todayExercises = emptyList(),
+                        todayExercises = persistentListOf(),
                         isLoading = false,
                     )
                 }
@@ -277,12 +286,25 @@ class SamsungHealthViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         statusMessage = "운동 데이터 조회 실패: ${e.message}",
-                        todayExercises = emptyList(),
+                        todayExercises = persistentListOf(),
                         isLoading = false,
                     )
                 }
                 Timber.tag("SamsungHealthVM").e(e, "Failed to read exercises for custom date range")
             }
+        }
+    }
+
+    fun resolveError(activity: Activity) {
+        val error = _state.value.errorLevel ?: return
+        if (!error.resolvable) return
+
+        val resolvableException = error.error as? ResolvablePlatformException ?: return
+        try {
+            resolvableException.resolve(activity)
+            _state.update { it.copy(errorLevel = null) }
+        } catch (e: Exception) {
+            Timber.tag("SamsungHealthVM").e(e, "Failed to resolve error")
         }
     }
 
@@ -334,7 +356,8 @@ data class SamsungHealthState(
     val permissionsGranted: Boolean,
     val todaySteps: Long,
     val weekSteps: Long,
-    val todayExercises: List<ExerciseData>,
+    val todayExercises: ImmutableList<ExerciseData>,
+    val exerciseDateLabel: String,
     val statusMessage: String,
     val errorLevel: HealthError?,
     val isLoading: Boolean,

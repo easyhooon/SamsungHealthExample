@@ -77,6 +77,9 @@ dependencies {
     // Serialization
     implementation(libs.kotlinx.serialization.json)
 
+    // Immutable Collections
+    implementation(libs.kotlinx.collections.immutable)
+
     // Debug
     debugImplementation(libs.androidx.ui.tooling)
 }
