@@ -36,7 +36,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.easyhooon.samsunghealthexample.model.ExerciseData
 import com.easyhooon.samsunghealthexample.model.HealthError
@@ -51,13 +51,11 @@ fun SamsungHealthScreen(
     modifier: Modifier = Modifier,
     viewModel: SamsungHealthViewModel = hiltViewModel(),
 ) {
-    val activity = LocalActivity.current
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     SamsungHealthContent(
         modifier = modifier,
         state = state,
-        activity = activity,
         onCheckPermissions = viewModel::checkPermissions,
         onRequestPermissions = viewModel::requestPermissions,
         onReadSteps = viewModel::readSteps,
@@ -71,7 +69,6 @@ fun SamsungHealthScreen(
 private fun SamsungHealthContent(
     modifier: Modifier = Modifier,
     state: SamsungHealthState,
-    activity: Activity?,
     onCheckPermissions: () -> Unit,
     onRequestPermissions: (Activity) -> Unit,
     onReadSteps: () -> Unit,
@@ -79,6 +76,8 @@ private fun SamsungHealthContent(
     onReadExercisesForDateRange: (LocalDate, LocalDate) -> Unit,
     onResolveError: (Activity) -> Unit,
 ) {
+    val activity = LocalActivity.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
