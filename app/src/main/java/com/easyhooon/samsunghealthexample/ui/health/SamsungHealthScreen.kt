@@ -3,6 +3,8 @@ package com.easyhooon.samsunghealthexample.ui.health
 import android.app.Activity
 import android.app.DatePickerDialog
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,10 +13,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,7 +41,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.easyhooon.samsunghealthexample.model.ExerciseData
 import com.easyhooon.samsunghealthexample.model.HealthError
 import kotlinx.collections.immutable.ImmutableList
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun SamsungHealthScreen(
@@ -223,29 +234,99 @@ private fun ExerciseCard(
 
 @Composable
 private fun ExerciseItem(exercise: ExerciseData) {
-    Text(
-        text = "${exercise.exerciseTypeName}: ${exercise.getDurationMinutes()}분, ${exercise.calorie.toInt()}kcal",
-        style = MaterialTheme.typography.bodyMedium,
-    )
-    if (exercise.distance > 0) {
+    var isHeartRateExpanded by remember { mutableStateOf(false) }
+    val dateTimeFormatter = remember {
+        DateTimeFormatter.ofPattern("MM/dd HH:mm")
+    }
+    val timeFormatter = remember {
+        DateTimeFormatter.ofPattern("HH:mm:ss")
+    }
+
+    val startDateTime = remember(exercise.startTime) {
+        Instant.ofEpochMilli(exercise.startTime)
+            .atZone(ZoneId.systemDefault())
+            .format(dateTimeFormatter)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+    ) {
         Text(
-            text = "  거리: ${"%.2f".format(exercise.getDistanceKm())}km",
+            text = "[$startDateTime] ${exercise.exerciseTypeName}",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = "  ${exercise.getDurationMinutes()}분, ${exercise.calorie.toInt()}kcal",
             style = MaterialTheme.typography.bodySmall,
         )
-    }
-    if (exercise.meanHeartRate > 0) {
-        Text(
-            text = "  평균 심박수: ${exercise.meanHeartRate.toInt()}bpm, 최대: ${exercise.maxHeartRate.toInt()}bpm",
-            style = MaterialTheme.typography.bodySmall,
+        if (exercise.distance > 0) {
+            Text(
+                text = "  거리: ${"%.2f".format(exercise.getDistanceKm())}km",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        if (exercise.meanHeartRate > 0) {
+            Text(
+                text = "  평균 심박수: ${exercise.meanHeartRate.toInt()}bpm, 최대: ${exercise.maxHeartRate.toInt()}bpm",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        if (exercise.meanSpeed > 0) {
+            Text(
+                text = "  평균 속도: ${"%.2f".format(exercise.meanSpeed)}m/s",
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+
+        // 심박수 리스트 드롭다운
+        if (!exercise.heartRates.isNullOrEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isHeartRateExpanded = !isHeartRateExpanded }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = if (isHeartRateExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (isHeartRateExpanded) "접기" else "펼치기",
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = "심박수 기록 (${exercise.heartRates.size}개)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            AnimatedVisibility(visible = isHeartRateExpanded) {
+                Column(
+                    modifier = Modifier.padding(start = 16.dp),
+                ) {
+                    exercise.heartRates.forEach { sample ->
+                        val time = Instant.ofEpochMilli(sample.timestamp)
+                            .atZone(ZoneId.systemDefault())
+                            .format(timeFormatter)
+                        Text(
+                            text = "$time: ${sample.heartRate}bpm",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider(
+            modifier = Modifier.padding(top = 8.dp),
+            color = MaterialTheme.colorScheme.outlineVariant,
         )
     }
-    if (exercise.meanSpeed > 0) {
-        Text(
-            text = "  평균 속도: ${"%.2f".format(exercise.meanSpeed)}m/s",
-            style = MaterialTheme.typography.bodySmall,
-        )
-    }
-    Spacer(modifier = Modifier.height(4.dp))
 }
 
 @Composable
