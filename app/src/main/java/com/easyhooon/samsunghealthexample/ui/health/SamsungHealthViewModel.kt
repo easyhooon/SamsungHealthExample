@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.easyhooon.samsunghealthexample.health.SamsungHealthManager
 import com.easyhooon.samsunghealthexample.model.ExerciseData
 import com.easyhooon.samsunghealthexample.model.HealthError
+import com.easyhooon.samsunghealthexample.model.HourlyStepData
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -161,11 +162,13 @@ class SamsungHealthViewModel @Inject constructor(
                     LocalDate.now().minusDays(7),
                     LocalDate.now(),
                 )
+                val hourlySteps = samsungHealthManager.getHourlyStepsForToday()
 
                 _state.update { currentState ->
                     currentState.copy(
                         todaySteps = todaySteps,
                         weekSteps = weekSteps,
+                        hourlySteps = hourlySteps.toImmutableList(),
                         statusMessage = "걸음수 데이터를 성공적으로 가져왔습니다!",
                         errorLevel = null,
                         isLoading = false,
@@ -356,6 +359,7 @@ data class SamsungHealthState(
     val permissionsGranted: Boolean,
     val todaySteps: Long,
     val weekSteps: Long,
+    val hourlySteps: ImmutableList<HourlyStepData> = persistentListOf(),
     val todayExercises: ImmutableList<ExerciseData>,
     val exerciseDateLabel: String,
     val statusMessage: String,

@@ -40,6 +40,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.easyhooon.samsunghealthexample.model.ExerciseData
 import com.easyhooon.samsunghealthexample.model.HealthError
+import com.easyhooon.samsunghealthexample.model.HourlyStepData
 import kotlinx.collections.immutable.ImmutableList
 import java.time.Instant
 import java.time.LocalDate
@@ -111,6 +112,7 @@ private fun SamsungHealthContent(
         StepsCard(
             todaySteps = state.todaySteps,
             weekSteps = state.weekSteps,
+            hourlySteps = state.hourlySteps,
         )
 
         Button(
@@ -173,7 +175,10 @@ private fun StatusCard(statusMessage: String) {
 private fun StepsCard(
     todaySteps: Long,
     weekSteps: Long,
+    hourlySteps: ImmutableList<HourlyStepData>,
 ) {
+    var isHourlyExpanded by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.padding(8.dp),
     ) {
@@ -193,9 +198,63 @@ private fun StepsCard(
                 fontSize = 20.sp,
             )
             Text(
-                text = "이번 주: $weekSteps 걸음",
+                text = "지난 7일간: $weekSteps 걸음",
                 style = MaterialTheme.typography.bodyLarge,
             )
+
+            // 시간별 걸음수
+            if (hourlySteps.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { isHourlyExpanded = !isHourlyExpanded }
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = if (isHourlyExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = if (isHourlyExpanded) "접기" else "펼치기",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(
+                        text = "시간별 걸음수 (${hourlySteps.size}시간)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                AnimatedVisibility(visible = isHourlyExpanded) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                    ) {
+                        hourlySteps.forEach { hourly ->
+                            val startHour = "%02d:00".format(hourly.hour)
+                            val endHour = "%02d:00".format(hourly.hour + 1)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    text = "$startHour ~ $endHour",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Text(
+                                    text = "${hourly.stepCount} 걸음",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = if (hourly.stepCount > 0) FontWeight.SemiBold else FontWeight.Normal,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

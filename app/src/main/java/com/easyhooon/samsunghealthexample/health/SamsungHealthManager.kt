@@ -4,6 +4,7 @@ import android.app.Activity
 import com.easyhooon.samsunghealthexample.model.DailyStepData
 import com.easyhooon.samsunghealthexample.model.ExerciseData
 import com.easyhooon.samsunghealthexample.model.HeartRateSample
+import com.easyhooon.samsunghealthexample.model.HourlyStepData
 import com.samsung.android.sdk.health.data.HealthDataStore
 import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.permission.AccessType
@@ -116,6 +117,51 @@ class SamsungHealthManager @Inject constructor(
         } catch (e: HealthDataException) {
             Timber.e(e, "Failed to get today's steps")
             0L
+        }
+    }
+
+    /**
+     * 오늘의 시간별 걸음 수 조회
+     */
+    @Throws(HealthDataException::class)
+    suspend fun getHourlyStepsForToday(): List<HourlyStepData> = withContext(Dispatchers.IO) {
+        try {
+            if (!hasAllPermissions()) {
+                Timber.w("Samsung Health permissions not granted")
+                return@withContext emptyList()
+            }
+
+            val today = LocalDate.now()
+            val currentHour = LocalDateTime.now().hour
+            val hourlySteps = mutableListOf<HourlyStepData>()
+
+            for (hour in 0..currentHour) {
+                val startTime = today.atTime(hour, 0, 0)
+                val endTime = if (hour == currentHour) {
+                    LocalDateTime.now()
+                } else {
+                    today.atTime(hour, 59, 59)
+                }
+
+                val localTimeFilter = LocalTimeFilter.of(startTime, endTime)
+                val aggregateRequest = DataType.StepsType.TOTAL.requestBuilder
+                    .setLocalTimeFilter(localTimeFilter)
+                    .build()
+
+                val result = healthDataStore.aggregateData(aggregateRequest)
+                var stepCount = 0L
+                result.dataList.forEach { aggregatedData ->
+                    aggregatedData.value?.let { stepCount = it }
+                }
+
+                hourlySteps.add(HourlyStepData(hour = hour, stepCount = stepCount))
+            }
+
+            Timber.d("Hourly steps retrieved: ${hourlySteps.size} hours")
+            hourlySteps
+        } catch (e: HealthDataException) {
+            Timber.e(e, "Failed to get hourly steps")
+            emptyList()
         }
     }
 
